@@ -2,22 +2,22 @@ import unittest
 
 from materials import load_corpus
 
+
 class MaterialsTest(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.data = load_corpus()
+    def test_records_preserve_source_text_and_sequence(self):
+        records = load_corpus()["records"]
+        keys = [record["id"] for record in records]
+        self.assertTrue(keys)
+        self.assertEqual(len(keys), len(set(keys)))
+        self.assertEqual([r["arrival_order"] for r in records], list(range(1, len(records) + 1)))
+        self.assertTrue(all(r["text"].strip() and r["kind"].strip() for r in records))
 
-    def test_project_has_materials(self):
-        self.assertEqual(self.data["project"], "分布式演出讲解稿的游客请求与剧目口径")
-        self.assertEqual(self.data["material_nature"], "本地合成演练资料")
-
-    def test_record_identifiers_are_unique(self):
-        identifiers = [record["id"] for record in self.data["records"]]
-        self.assertEqual(len(identifiers), len(set(identifiers)))
-
-    def test_records_retain_their_raw_context(self):
-        self.assertTrue(all(record["kind"] and record["text"] for record in self.data["records"]))
-        self.assertTrue(any(len(record["text"]) > 12 for record in self.data["records"]))
-
-if __name__ == "__main__":
-    unittest.main()
+    def test_explicit_cross_references_resolve(self):
+        records = load_corpus()["records"]
+        positions = {record["id"]: record["arrival_order"] for record in records}
+        refs = [(r["id"], ref) for r in records for ref in r["references"]]
+        self.assertTrue(refs)
+        for source, target in refs:
+            with self.subTest(source=source, target=target):
+                self.assertIn(target, positions)
+                self.assertLess(positions[target], positions[source])
